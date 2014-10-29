@@ -31,5 +31,6 @@ int get_input(){
 
 int main() {
   get_input();
-  BnbTree(value, weight, knapsacks);
+  BnbTree bnbTree = BnbTree(value, weight, knapsacks);
+  bnbTree.solve();
 }
