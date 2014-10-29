@@ -7,6 +7,10 @@
 
 using namespace std;
 
+vector<bool> setIntersection(vector<bool> a, vector<bool> b);
+vector<bool> setNegation(vector<bool> a);
+vector<bool> setSubtraction(vector<bool> a, vector<bool> b);
+
 Knapsack_sol::Knapsack_sol() {}
 Knapsack_sol::Knapsack_sol(knapsack knapsack, int size)
   : knapsack_id(knapsack.index), size(size), remainingCapacity(knapsack.capacity),
@@ -41,11 +45,9 @@ BnbTree::BnbTree( vector< int > value, vector< int > weight, vector< int > capac
 
   numItems = value.size();
   numKnapsacks = capacity.size();
-  vector<bool> includeKnapsack = vector<bool>(numKnapsacks, true);
-  vector<bool> includeItem = vector<bool>(numItems, true);
 
-  int maxKnapsack = *max_element(capacity.begin(), capacity.end());
-  int minItem = *min_element(capacity.begin(), capacity.end());
+  maxKnapsack = *max_element(capacity.begin(), capacity.end());
+  minItem = *min_element(capacity.begin(), capacity.end());
 
   // problem simplification - remove too small bags, and too large bags
   for (int i = 0; i < capacity.size(); i++) {
@@ -60,6 +62,9 @@ BnbTree::BnbTree( vector< int > value, vector< int > weight, vector< int > capac
       value.erase(value.begin() + i);
     }
   }
+
+  // and the empty knapsack
+  capacity.push_back(0);
 
   // Now we know the number of pruned items, initialize our vectors
   numItems = value.size();
@@ -89,6 +94,15 @@ BnbTree::BnbTree( vector< int > value, vector< int > weight, vector< int > capac
 
 }
 
+void BnbTree::computeVPrime() {
+  v_prime = 0;
+  for (int i = 0; i < numKnapsacks; i++) {
+    for (int j = 0; j < numItems; j++) {
+      v_prime += x_prime[i][j];
+    }
+  }
+}
+
 void BnbTree::greedyLower() {
   l = 0;
   vector<bool> included = vector<bool>(numItems, false);
@@ -107,7 +121,7 @@ void BnbTree::greedyLower() {
     vector<bool> assignedRow = considered_sol.getIncluded();
     vector<bool> &solRow = x_prime[considered_knapsack.index];
     copy(assignedRow.begin(), assignedRow.end(), solRow.begin());
-    cout << considered_knapsack.index << endl;
+    computeVPrime();
   }
   cout << l << endl;
 }
@@ -117,6 +131,7 @@ void BnbTree::initialize() {
   j_1 = vector<bool>(numItems, false);
 
   v = vector<vector<int> >(numItems, vector<int>(numKnapsacks + 1, 0));
+  v_bar = vector<vector<int> >(numItems, vector<int>(numKnapsacks + 1, 0));
   b = vector<vector<int> >(numItems, vector<int>(numKnapsacks + 1, 0));
 
   for (int i = 0; i < numKnapsacks; i++) {
@@ -125,17 +140,20 @@ void BnbTree::initialize() {
     v[0][i] = sol.getSolution();
   }
   // initialize f and a
-  f = vector<bool>(numItems, true);
-  a = vector<vector<bool> >(numKnapsacks, vector<bool>(numItems, true));
+  n = vector<bool>(numItems, true);
+  f = n;
+  a = vector<vector<bool> >(numKnapsacks, n);
 
   // initialize available capacity as total capacity
   c = accumulate(capacity.begin(), capacity.end(), 0);
 
   k = vector<int>(numItems, 0);
   b[0][0] = accumulate(v[0].begin(), v[0].end(), 0);
+  u = b[0][0];
   cout << b[0][0] << endl;
   e = 1;
-
+  d.resize(numItems);
+  s.resize(numItems);
 }
 
 void BnbTree::recordWitnessVector(vector<int> witnessVector, int sortedKnapsackIndex) {
@@ -151,35 +169,135 @@ void BnbTree::recordWitnessVector(vector<int> witnessVector, int sortedKnapsackI
 }
 
 bool BnbTree::branch() {
+  cout << "Started Branch" << endl;
   int timesSeen;
   // search for a viable branch candidate
   for (int i = 0; i < numItems; i++) {
     timesSeen = 0;
-    d = vector<bool>(numKnapsacks, false);
+    vector<bool> d_e = vector<bool>(numKnapsacks, false);
     for (int j = 0; j < numKnapsacks; j++) {
       if (x[j][i]) {
         timesSeen++;
-        d[j] = true;
+        d_e[j] = true;
       }
     }
     if (timesSeen > 1) {
+      s[e] = i;
+      d[e] = d_e;
+      cout << "End Branch" << endl;
       return true;
     }
   }
+  cout << "End Branch" << endl;
   return false;
 }
 
 void BnbTree::bound() {
+  cout << "Started Bound" << endl;
+  int w = c;
+  vector<bool> j_1_neg = setNegation(j_1);
+  vector<bool> f_neg = setNegation(f);
+  vector<bool> subtractingSet = setIntersection(
+    f_neg,
+    j_1_neg
+  );
+  for (int i = 0; i < numItems; i++) {
+    if (subtractingSet[i]) {
+      w -= weight[i];
+    }
+  }
 
+  vector<bool> f_bar = f;
+
+  for (int i = 0; i < numItems; i++) {
+    if (j_1_neg[i] && weight[i] > w) {
+      f_bar[i] = false;
+    }
+  }
+
+  f_bar[s[e]] = false;
+
+  for (int i = 0; i < numKnapsacks; i++) {
+    if (!d[e][i]) {
+      continue;
+    }
+    vector<bool> searchable = setIntersection(f_bar, a[i]);
+    vector<int> newWeights = weight;
+
+    cout << "1" << endl;
+    for (int j = 0; j < numItems; j++) {
+      if (!searchable[j]) {
+        newWeights[j] = maxKnapsack + 1;
+      }
+    }
+
+    Knapsack sol = Knapsack(value, newWeights, capacity[i], true);
+    recordWitnessVector(sol.getWitness(), i);
+    v[e][i] = sol.getSolution();
+    int z = v[e][i];
+
+    cout << "2" << endl;
+    vector<bool> newSolVec = vector<bool>(numItems, false);
+    for (int j = 0; j < numItems; j++) {
+      if (f_neg[j] && x[i][j]) {
+        newSolVec[j] = true;
+        z += value[j];
+      }
+    }
+    cout << "3" << endl;
+
+    copy(newSolVec.begin(), newSolVec.end(), x[i].begin());
+
+    cout << "5" << endl;
+
+    v_bar[e][i] = z;
+    cout << "6" << endl;
+  }
+  cout << "4" << endl;
+
+  for (int h = 0; h < numKnapsacks; h++) {
+    if (!d[e][h]) {
+      continue;
+    }
+    b[e][h] = 0;
+    for (int i = 0; i < numKnapsacks; i++) {
+      vector<bool> searchable = setNegation(d[e]);
+      searchable[h] = true;
+      if (searchable[i]) {
+        b[e][h] += v[e - 1][i];
+      }
+    }
+    for (int i = 0; i < numKnapsacks; i++) {
+      vector<bool> searchable = d[e];
+      searchable[h] = false;
+      if (searchable[i]) {
+        b[e][h] += v_bar[e][i];
+      }
+    }
+  }
+  cout << "End Bound" << endl;
 }
 
+void BnbTree::sortPhase() {
+  cout << "Started Sort" << endl;
+  
+  cout << "End Sort" << endl;
+}
+
+
+
+
 vector<bool> setIntersection(vector<bool> a, vector<bool> b) {
-
-
+  vector<bool> result = vector<bool>(a.size(), false);
+  for (int i = 0; i < a.size(); i++) {
+    result[i] = a[i] && b[i];
+  }
+  return result;
 }
 
 vector<bool> setSubtraction(vector<bool> a, vector<bool> b) {
-
+  vector<bool> notAAndB = setNegation(setIntersection(a,b));
+  return setIntersection(a, notAAndB);
 }
 
 vector<bool> setNegation(vector<bool> a) {
@@ -192,6 +310,10 @@ vector<bool> setNegation(vector<bool> a) {
 
 void BnbTree::solve() {
   initialize();
-  branch();
+  bool success = branch();
+  if (success) {
+    bound();
+    sortPhase();
+  }
 }
 

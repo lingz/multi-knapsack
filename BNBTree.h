@@ -47,9 +47,9 @@ class BnbTree{
     void solve();
   private:
     int e;
-    int s_e;
-    vector< vector<bool> > x;
-    vector<bool> d;
+    vector<int> s;
+    vector<vector<bool> > x;
+    vector<vector<bool> > d;
     vector<int> k;
     vector< vector<int> > v;
     vector< vector<int> > v_bar;
@@ -74,8 +74,13 @@ class BnbTree{
     void initialize();
     void recordWitnessVector(vector<int> witnessVector,
       int sortedKnapsackIndex);
+    void computeVPrime();
     bool branch();
     void bound();
+    void sortPhase();
+    int maxKnapsack;
+    int minItem;
+    int u;
 };
 
 
