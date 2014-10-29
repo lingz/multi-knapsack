@@ -45,42 +45,20 @@ class BnbTree{
   public:
     BnbTree( vector< int > value, vector< int > weight, vector< int > capacity);
     void solve();
+    vector<vector<int> > getWitness();
+    int getScore();
   private:
-    int e;
-    vector<int> s;
-    vector<vector<bool> > x;
-    vector<vector<bool> > d;
-    vector<int> k;
-    vector< vector<int> > v;
-    vector< vector<int> > v_bar;
-    vector< vector<int> > b;
-    vector< vector<bool> > x_prime;
-    int v_prime;
-    vector<bool> n;
-    vector<bool> m;
-    vector<bool> f;
-    vector< vector<bool> > a;
-    vector<bool> j_1;
-    int c;
     vector<item> items;
     vector<knapsack> knapsacks;
     vector<int> weight;
     vector<int> value;
     vector<int> capacity;
-    int l;
-    int numItems;
-    int numKnapsacks;
-    void greedyLower();
-    void initialize();
-    void recordWitnessVector(vector<int> witnessVector,
-      int sortedKnapsackIndex);
-    void computeVPrime();
-    bool branch();
-    void bound();
-    void sortPhase();
+    vector<vector<bool> > sol;
+    int score;
     int maxKnapsack;
     int minItem;
-    int u;
+    int numItems;
+    int numKnapsacks;
 };
 
 

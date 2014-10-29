@@ -33,4 +33,10 @@ int main() {
   get_input();
   BnbTree bnbTree = BnbTree(value, weight, knapsacks);
   bnbTree.solve();
+  vector<vector<int> > witness = bnbTree.getWitness(); 
+  for (int i = 0; i < witness.size(); i++) {
+    for (int j = 0; j < witness[i].size(); j++) {
+      cout << witness[i][j] + 1 << " " << i + 1 << endl;
+    }
+  }
 }
