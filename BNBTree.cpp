@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cassert>
 #include "knapsack.h"
+#include<cstdlib>
+#include<ctime>
 
 using namespace std;
 
@@ -88,7 +90,7 @@ BnbTree::BnbTree( vector< int > value, vector< int > weight, vector< int > capac
 
 }
 
-void BnbTree::solve() {
+void BnbTree::round(bool canSkip) {
   score = 0;
   vector<bool> included = vector<bool>(numItems, false);
   sol = vector<vector<bool> >(numKnapsacks, vector<bool>(numItems, false));
@@ -96,7 +98,11 @@ void BnbTree::solve() {
     knapsack considered_knapsack = knapsacks[i];
     Knapsack_sol considered_sol = Knapsack_sol(considered_knapsack, numItems);
     for (int j = 0; j < items.size(); j++) {
-      if (included[j]) continue;
+      if (included[j] || blocked == j) continue;
+      if (canSkip && !hasSkipped && rand() % 100 < 10) {
+        hasSkipped = true;
+        continue;
+      }
       item considered_item = items[j];
       if (considered_item.weight <= considered_sol.getRemainingCapacity()) {
         considered_sol.addItem(considered_item);
@@ -106,6 +112,22 @@ void BnbTree::solve() {
     }
     score += considered_sol.getValue();
   }
+}
+
+void BnbTree::solve() {
+  round(false);
+  int max = getScore();
+  cout << getScore() << endl;
+
+  srand(time(0));  // needed once per program run
+  for (int i = 0; i < 100000; i++) {
+    hasSkipped = false;
+    round(true);
+    if (getScore() > max) {
+      max = getScore();
+    }
+  }
+  cout << max << endl;
 }
 
 int BnbTree::getScore() {

@@ -54,11 +54,14 @@ class BnbTree{
     vector<int> value;
     vector<int> capacity;
     vector<vector<bool> > sol;
+    void round(bool canSkip);
+    int blocked;
     int score;
     int maxKnapsack;
     int minItem;
     int numItems;
     int numKnapsacks;
+    bool hasSkipped;
 };
 
 
